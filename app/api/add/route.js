@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase, authorized, shortcodeFromUrl } from "../../../lib/supabase";
+import { getSupabase, authorized, shortcodeFromUrl } from "../../../lib/supabase";
 import { tagPost } from "../../../lib/claude";
 
 export const runtime = "nodejs";
@@ -8,6 +8,8 @@ export async function POST(req) {
   if (!authorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+
+  const supabase = getSupabase();
 
   let body;
   try {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase, authorized } from "../../../lib/supabase";
+import { getSupabase, authorized } from "../../../lib/supabase";
 import { tagPost } from "../../../lib/claude";
 
 export const runtime = "nodejs";
@@ -8,6 +8,8 @@ export async function POST(req) {
   if (!authorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+
+  const supabase = getSupabase();
 
   const { id, text, owner_username = "", owner_name = "" } = await req.json();
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
