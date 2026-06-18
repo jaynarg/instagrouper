@@ -27,7 +27,7 @@ const CSS = `
 .stash-tag { color:var(--muted); font-size:15px; margin:8px 0 0; }
 .stash-tag b { color:var(--ink); font-weight:700; }
 .stash-ws { font-size:13px; color:var(--muted); margin:6px 0 0; }
-.stash-ws b { color:var(--ink); font-weight:700; text-transform:capitalize; }
+.stash-ws b { color:var(--ink); font-weight:700; }
 .stash-lock { font-family:inherit; font-size:13px; font-weight:700; color:var(--violet); background:none; border:none; cursor:pointer; padding:0; }
 .stash-lock:hover { text-decoration:underline; }
 .stash-add { font-family:inherit; font-weight:700; font-size:15px; background:var(--violet); color:#fff; border:none; border-radius:999px; padding:11px 20px; cursor:pointer; transition:transform .12s, box-shadow .12s; box-shadow:0 2px 0 rgba(91,63,214,.25); }
@@ -155,6 +155,7 @@ export default function App() {
   const [gate, setGate] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [workspace, setWorkspace] = useState(null);
+  const [handle, setHandle] = useState(null);
 
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("All");
@@ -169,7 +170,7 @@ export default function App() {
       const res = await api("/api/posts");
       if (res.status === 401) { setGate(true); setLoading(false); return; }
       if (!res.ok) { setError("Couldn't load your posts. Try refreshing."); setLoading(false); return; }
-      const body = await res.json(); setPosts(body.posts || []); setWorkspace(body.workspace || null); setGate(false);
+      const body = await res.json(); setPosts(body.posts || []); setWorkspace(body.workspace || null); setHandle(body.handle || null); setGate(false);
     } catch { setError("Couldn't reach the server. Check your connection and refresh."); }
     setLoading(false);
   }
@@ -181,7 +182,7 @@ export default function App() {
   }
   function lock() {
     try { localStorage.removeItem("stash-key"); } catch {}
-    setWorkspace(null); setPosts([]); setGate(true);
+    setWorkspace(null); setHandle(null); setPosts([]); setGate(true);
   }
 
   async function savePost({ id, summary, tags }) {
@@ -292,7 +293,7 @@ export default function App() {
             <h1 className="stash-brand"><Mark/>Instagrouper</h1>
             <p className="stash-attrib">by Jay Nargundkar (2026)</p>
             <p className="stash-tag"><b>{posts.length} saved posts.</b> Find the one you were looking for.</p>
-            {workspace && <p className="stash-ws">Workspace: <b>{workspace}</b> · <button className="stash-lock" onClick={lock}>Lock</button></p>}
+            {workspace && <p className="stash-ws">{handle ? <>Account: <b>@{handle}</b></> : <>Workspace: <b>{workspace}</b></>} · <button className="stash-lock" onClick={lock}>Lock</button></p>}
           </div>
           <button className="stash-add" onClick={() => setAdding(true)}>+ Add a post</button>
         </div>

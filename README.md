@@ -121,7 +121,9 @@ No new deployment — just data + a passphrase:
    python scripts\load_to_supabase.py tagged_posts.json --workspace mom
    ```
 2. **Add their passphrase** to the `WORKSPACES` env var in Vercel:
-   `{"your-phrase":"jay","her-phrase":"mom"}`
+   `{"your-phrase":"jay","her-phrase":"mom"}`. Optionally add her handle to the
+   `HANDLES` var so the page shows "Account: @herhandle":
+   `{"jay":"jayguevara25","mom":"her_handle"}`.
 3. **Redeploy.** Send her the same URL; she enters her passphrase and sees only
    her recipes. The in-app **Lock** button (top of the page) clears the saved
    passphrase so a shared device can switch workspaces.

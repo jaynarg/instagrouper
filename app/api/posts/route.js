@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabase, resolveWorkspace } from "../../../lib/supabase";
+import { getSupabase, resolveWorkspace, handleForWorkspace } from "../../../lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,5 +21,5 @@ export async function GET(req) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ workspace, posts: data });
+  return NextResponse.json({ workspace, handle: handleForWorkspace(workspace), posts: data });
 }
