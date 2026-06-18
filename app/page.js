@@ -26,6 +26,10 @@ const CSS = `
 .stash-mark { width:26px; height:30px; }
 .stash-tag { color:var(--muted); font-size:15px; margin:8px 0 0; }
 .stash-tag b { color:var(--ink); font-weight:700; }
+.stash-ws { font-size:13px; color:var(--muted); margin:6px 0 0; }
+.stash-ws b { color:var(--ink); font-weight:700; text-transform:capitalize; }
+.stash-lock { font-family:inherit; font-size:13px; font-weight:700; color:var(--violet); background:none; border:none; cursor:pointer; padding:0; }
+.stash-lock:hover { text-decoration:underline; }
 .stash-add { font-family:inherit; font-weight:700; font-size:15px; background:var(--violet); color:#fff; border:none; border-radius:999px; padding:11px 20px; cursor:pointer; transition:transform .12s, box-shadow .12s; box-shadow:0 2px 0 rgba(91,63,214,.25); }
 .stash-add:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(91,63,214,.3); }
 .stash-add:focus-visible { outline:3px solid var(--violet-soft); outline-offset:2px; }
@@ -150,6 +154,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [gate, setGate] = useState(false);
   const [keyInput, setKeyInput] = useState("");
+  const [workspace, setWorkspace] = useState(null);
 
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState("All");
@@ -164,7 +169,7 @@ export default function App() {
       const res = await api("/api/posts");
       if (res.status === 401) { setGate(true); setLoading(false); return; }
       if (!res.ok) { setError("Couldn't load your posts. Try refreshing."); setLoading(false); return; }
-      setPosts(await res.json()); setGate(false);
+      const body = await res.json(); setPosts(body.posts || []); setWorkspace(body.workspace || null); setGate(false);
     } catch { setError("Couldn't reach the server. Check your connection and refresh."); }
     setLoading(false);
   }
@@ -173,6 +178,10 @@ export default function App() {
   function submitKey() {
     try { localStorage.setItem("stash-key", keyInput.trim()); } catch {}
     setKeyInput(""); load();
+  }
+  function lock() {
+    try { localStorage.removeItem("stash-key"); } catch {}
+    setWorkspace(null); setPosts([]); setGate(true);
   }
 
   async function savePost({ id, summary, tags }) {
@@ -263,7 +272,7 @@ export default function App() {
         <div className="stash-center">
           <h1><Mark/>Instagrouper</h1>
           <p className="stash-attrib" style={{ marginBottom: 14 }}>by Jay Nargundkar (2026)</p>
-          <p>Enter the passphrase to open your library.</p>
+          <p>Enter your passphrase to open your workspace.</p>
           <input className="stash-input" type="password" value={keyInput} autoFocus
             placeholder="Passphrase" onChange={(e) => setKeyInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submitKey(); }} />
@@ -283,6 +292,7 @@ export default function App() {
             <h1 className="stash-brand"><Mark/>Instagrouper</h1>
             <p className="stash-attrib">by Jay Nargundkar (2026)</p>
             <p className="stash-tag"><b>{posts.length} saved posts.</b> Find the one you were looking for.</p>
+            {workspace && <p className="stash-ws">Workspace: <b>{workspace}</b> · <button className="stash-lock" onClick={lock}>Lock</button></p>}
           </div>
           <button className="stash-add" onClick={() => setAdding(true)}>+ Add a post</button>
         </div>

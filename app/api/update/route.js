@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSupabase, authorized } from "../../../lib/supabase";
+import { getSupabase, resolveWorkspace } from "../../../lib/supabase";
 
 export const runtime = "nodejs";
 
 export async function POST(req) {
-  if (!authorized(req)) {
+  const workspace = resolveWorkspace(req);
+  if (!workspace) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -21,6 +22,7 @@ export async function POST(req) {
     .from("posts")
     .update(patch)
     .eq("id", id)
+    .eq("workspace", workspace)
     .select()
     .single();
 

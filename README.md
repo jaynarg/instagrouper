@@ -4,9 +4,16 @@ Your saved Instagram posts, finally searchable. Bulk-import an Instagram data
 export, auto-tag everything with Claude, then search and filter — and paste a URL
 to add new ones over time.
 
-This is built to run **one copy per person** (you, your mom, a friend) on free
-tiers: Vercel for the app, Supabase for the database. Tagging runs on your
-Anthropic API key and costs roughly a tenth of a cent per post.
+One deployment serves several people as separate **workspaces**: each person has
+their own passphrase and sees only their own posts, all from the same URL. Runs on
+free tiers (Vercel + Supabase); tagging runs on your Anthropic API key at roughly
+a tenth of a cent per post.
+
+> **Heads up on privacy model:** workspaces are kept apart by the app scoping
+> every query to the passphrase's workspace — one database, separated in code, not
+> separate databases. A passphrase is the whole identity (no accounts, no reset),
+> and you as the operator can always read every workspace directly in Supabase.
+> Right for a handful of known people; not a substitute for real auth.
 
 ---
 
@@ -23,7 +30,7 @@ app/
     update/route.js    POST — save a manual edit
     delete/route.js    POST — remove a post from the database
 lib/
-  supabase.js          server-side DB client + passphrase gate
+  supabase.js          server-side DB client + passphrase→workspace resolver
   claude.js            the tagging prompt + call
 scripts/
   tag_posts.py         one-time: tag your export into tagged_posts.json
@@ -54,11 +61,11 @@ time in the app.
       $env:ANTHROPIC_API_KEY = "sk-ant-..."
       python scripts\tag_posts.py saved_posts.json      # -> tagged_posts.json
       ```
-- [ ] Load into Supabase:
+- [ ] Load into Supabase (the `--workspace` name is required — use your own, e.g. `jay`):
       ```powershell
       $env:SUPABASE_URL = "https://YOURPROJECT.supabase.co"
       $env:SUPABASE_SERVICE_KEY = "your-service_role-key"
-      python scripts\load_to_supabase.py tagged_posts.json
+      python scripts\load_to_supabase.py tagged_posts.json --workspace jay
       ```
 - [ ] Confirm the rows landed under **Table Editor → posts** in Supabase.
 
@@ -74,8 +81,10 @@ time in the app.
       - `SUPABASE_URL`
       - `SUPABASE_SERVICE_KEY`
       - `ANTHROPIC_API_KEY`
-      - `APP_PASSWORD` — a passphrase you choose; gates the app and protects your
-        tagging bill. (Leave it out only if you want the app fully open.)
+      - `WORKSPACES` — a one-line JSON map of passphrase → workspace, e.g.
+        `{"correct-horse-battery-staple":"jay","purple-saffron-2026":"mom"}`.
+        Use long, unguessable passphrases. The workspace names must match what you
+        passed to `--workspace` when loading data.
 - [ ] Click **Deploy**. Vercel runs `npm install` and builds in the cloud, so npm
       being blocked on your work machine doesn't matter.
 - [ ] Open the resulting `…vercel.app` URL, enter your passphrase, and your library
@@ -84,20 +93,42 @@ time in the app.
 Editing later: change files in the GitHub web UI and Vercel auto-redeploys on each
 commit.
 
-> **Upgrading an existing table?** If you built your `posts` table from an earlier
-> version of `schema.sql`, just run the one-line `ALTER … add column … edited` at
-> the bottom of `schema.sql` so the Delete feature works.
+> **Upgrading an existing table?** If you built your `posts` table before workspaces
+> existed, run the **MIGRATION** block at the bottom of `schema.sql` (it adds the
+> `workspace` column and stamps your current rows as `jay`).
 
 ---
 
-## Making a copy for someone else
-Spin up a separate Supabase project and a separate Vercel deploy (or a second
-repo) for each person. Same code, different data and passphrase. Nobody shares a
-library, and each person's tagging runs on the same API key — at these volumes,
-still pennies.
+## Already running single-workspace? Migrate to workspaces
+If you have a live deployment with your own data already loaded, do this once:
+
+1. **Supabase → SQL Editor:** run the `MIGRATION` block at the bottom of
+   `schema.sql`. It adds `workspace`, sets every existing row to `jay`, and swaps
+   the unique constraint to `(workspace, fbid)`.
+2. **Push the updated code** to GitHub (these files).
+3. **Vercel → Environment Variables:** add `WORKSPACES` (e.g.
+   `{"your-phrase":"jay"}`) and delete the old `APP_PASSWORD`. Make sure it's
+   enabled for Production.
+4. **Redeploy** (env-var changes need a fresh deploy). Open the app, enter your
+   passphrase — your existing posts load, now inside the `jay` workspace.
+
+## Adding another person (e.g. mom)
+No new deployment — just data + a passphrase:
+
+1. **Load their export** into the *same* Supabase project with their workspace name:
+   ```powershell
+   python scripts\tag_posts.py moms_saved_posts.json
+   python scripts\load_to_supabase.py tagged_posts.json --workspace mom
+   ```
+2. **Add their passphrase** to the `WORKSPACES` env var in Vercel:
+   `{"your-phrase":"jay","her-phrase":"mom"}`
+3. **Redeploy.** Send her the same URL; she enters her passphrase and sees only
+   her recipes. The in-app **Lock** button (top of the page) clears the saved
+   passphrase so a shared device can switch workspaces.
 
 ## Notes
-- Keys are server-side only (no `NEXT_PUBLIC_` prefix), so they never reach the
-  browser. All database access goes through the API routes.
-- The original Instagram caption is stored read-only; your edits live in
-  `summary`. "Re-tag with AI" regenerates category + tags from your edited text.
+- Keys are server-side only (no `NEXT_PUBLIC_` prefix); all DB access goes through
+  the API routes, scoped to the caller's workspace on every read *and* write.
+- The original Instagram caption is stored read-only; edits live in `summary`.
+  "Re-tag with AI" regenerates category + tags from the edited text.
+- Same Instagram post in two workspaces is fine — dedupe is per `(workspace, fbid)`.

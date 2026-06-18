@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSupabase, authorized } from "../../../lib/supabase";
+import { getSupabase, resolveWorkspace } from "../../../lib/supabase";
 import { tagPost } from "../../../lib/claude";
 
 export const runtime = "nodejs";
 
 export async function POST(req) {
-  if (!authorized(req)) {
+  const workspace = resolveWorkspace(req);
+  if (!workspace) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -21,10 +22,12 @@ export async function POST(req) {
     return NextResponse.json({ error: "Tagging failed: " + e.message }, { status: 502 });
   }
 
+  // Scope the update to this workspace so a row id from elsewhere can't be touched.
   const { data, error } = await supabase
     .from("posts")
     .update({ ...tags, edited: false })
     .eq("id", id)
+    .eq("workspace", workspace)
     .select()
     .single();
 

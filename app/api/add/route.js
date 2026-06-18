@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSupabase, authorized, shortcodeFromUrl } from "../../../lib/supabase";
+import { getSupabase, resolveWorkspace, shortcodeFromUrl } from "../../../lib/supabase";
 import { tagPost } from "../../../lib/claude";
 
 export const runtime = "nodejs";
 
 export async function POST(req) {
-  if (!authorized(req)) {
+  const workspace = resolveWorkspace(req);
+  if (!workspace) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -33,6 +34,7 @@ export async function POST(req) {
   }
 
   const row = {
+    workspace,
     fbid: shortcodeFromUrl(url) || "new-" + Date.now(),
     url,
     caption: note,
@@ -44,9 +46,10 @@ export async function POST(req) {
     edited: false,
   };
 
+  // Dedupe within this workspace (same post can exist in two people's workspaces).
   const { data, error } = await supabase
     .from("posts")
-    .upsert(row, { onConflict: "fbid" })
+    .upsert(row, { onConflict: "workspace,fbid" })
     .select()
     .single();
 

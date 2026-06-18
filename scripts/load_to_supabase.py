@@ -1,19 +1,18 @@
 """
-load_to_supabase.py — push tagged_posts.json into your Supabase 'posts' table.
-
-This is the one-time bulk backfill. It upserts on 'fbid', so re-running is safe
-(it won't create duplicates, and it'll fill in any newly-tagged posts).
+load_to_supabase.py — push tagged_posts.json into your Supabase 'posts' table,
+stamped with a workspace name so each person's library stays separate.
 
 Usage (Windows PowerShell):
-    pip install requests
-    $env:SUPABASE_URL = "https://YOURPROJECT.supabase.co"
-    $env:SUPABASE_SERVICE_KEY = "eyJ...."   # service_role key (Settings -> API)
-    python load_to_supabase.py tagged_posts.json
+    pip install requests pip-system-certs
+    $env:SUPABASE_URL = "https://YOURPROJECT.supabase.co"     # must be https://
+    $env:SUPABASE_SERVICE_KEY = "your-service_role-key"        # NOT the anon key
+    python scripts\\load_to_supabase.py tagged_posts.json --workspace mom
 
-The service_role key bypasses RLS, which is why the bulk load works even though
-the public can only read. Keep that key OFF the frontend and out of GitHub.
+--workspace is REQUIRED (e.g. 'jay', 'mom'). It upserts on (workspace, fbid),
+so re-running is safe and two people can each save the same Instagram post.
 """
 
+import argparse
 import json
 import os
 import sys
@@ -24,17 +23,23 @@ SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
 if not SUPABASE_URL or not SERVICE_KEY:
     sys.exit("ERROR: set SUPABASE_URL and SUPABASE_SERVICE_KEY first.")
+if not SUPABASE_URL.startswith("https://"):
+    sys.exit(f"ERROR: SUPABASE_URL must start with https:// (got: {SUPABASE_URL})")
 
-infile = sys.argv[1] if len(sys.argv) > 1 else "tagged_posts.json"
-with open(infile, encoding="utf-8") as f:
+ap = argparse.ArgumentParser()
+ap.add_argument("infile", nargs="?", default="tagged_posts.json")
+ap.add_argument("--workspace", required=True, help="workspace name to stamp these rows with, e.g. mom")
+args = ap.parse_args()
+
+with open(args.infile, encoding="utf-8") as f:
     posts = json.load(f)
 
-# Map our tagged records to table columns. Skip any post that never got tagged.
 rows = []
 for p in posts:
     if "tags" not in p:
         continue
     rows.append({
+        "workspace": args.workspace,
         "fbid": p.get("fbid"),
         "url": p.get("url"),
         "caption": p.get("caption"),
@@ -46,9 +51,10 @@ for p in posts:
         "content_type": p.get("content_type"),
         "tags": p.get("tags", []),
         "summary": p.get("summary"),
+        "edited": False,
     })
 
-endpoint = f"{SUPABASE_URL}/rest/v1/posts?on_conflict=fbid"
+endpoint = f"{SUPABASE_URL}/rest/v1/posts?on_conflict=workspace,fbid"
 headers = {
     "apikey": SERVICE_KEY,
     "Authorization": f"Bearer {SERVICE_KEY}",
@@ -56,15 +62,14 @@ headers = {
     "Prefer": "resolution=merge-duplicates,return=minimal",
 }
 
-# Send in chunks to stay well under any payload limits.
 CHUNK = 50
 sent = 0
 for i in range(0, len(rows), CHUNK):
     batch = rows[i:i + CHUNK]
     r = requests.post(endpoint, headers=headers, data=json.dumps(batch))
     if r.status_code >= 300:
-        sys.exit(f"FAILED on batch {i//CHUNK}: {r.status_code} {r.text}")
+        sys.exit(f"FAILED on batch {i // CHUNK}: {r.status_code} {r.text}")
     sent += len(batch)
     print(f"  upserted {sent}/{len(rows)}")
 
-print(f"\nDone. {sent} posts in Supabase.")
+print(f"\nDone. {sent} posts loaded into workspace '{args.workspace}'.")
