@@ -55,6 +55,7 @@ const CSS = `
 .stash-qtag:hover { background:#ddd5fd; }
 .stash-qtag[data-active="true"] { background:var(--violet); color:#fff; }
 .stash-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:16px; margin-top:22px; align-items:start; }
+.stash-more { text-align:center; color:var(--muted); font-size:13px; padding:18px 0 4px; min-height:24px; }
 .stash-card { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; display:flex; transition:transform .14s, box-shadow .14s; }
 .stash-card:hover { transform:translateY(-3px); box-shadow:0 12px 28px rgba(32,35,46,.10); }
 .stash-card[data-editing="true"] { transform:none; box-shadow:0 12px 28px rgba(69,47,163,.16); border-color:#cdbffb; }
@@ -268,6 +269,23 @@ export default function App() {
 
   const clearAll = () => { setQuery(""); setCat("All"); setActiveTag(null); };
 
+  // Lazy render: only mount a window of cards, grow it as the user scrolls.
+  // Keeps React diffing a small list even when a workspace has thousands of posts.
+  const BATCH = 60;
+  const [visible, setVisible] = useState(BATCH);
+  const sentinelRef = useRef(null);
+  // Start each new view (search / filter / sort change) from the top.
+  useEffect(() => { setVisible(BATCH); }, [query, cat, activeTag, sort]);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) setVisible((v) => Math.min(v + BATCH, filtered.length));
+    }, { rootMargin: "800px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [filtered.length]);
+
   if (gate) {
     return (
       <div className="stash-root"><style>{CSS}</style>
@@ -339,9 +357,12 @@ export default function App() {
               </div>
             ) : (
               <div className="stash-grid">
-                {filtered.map((p) => (
+                {filtered.slice(0, visible).map((p) => (
                   <PostCard key={p.id} post={p} onSave={savePost} onRetag={retagPost} onAskDelete={setConfirmDel} onTag={setActiveTag} />
                 ))}
+              </div>
+              <div ref={sentinelRef} className="stash-more" aria-hidden="true">
+                {visible < filtered.length ? "Loading more\u2026" : ""}
               </div>
             )}
           </>
