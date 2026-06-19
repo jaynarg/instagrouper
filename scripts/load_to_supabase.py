@@ -15,11 +15,18 @@ so re-running is safe and two people can each save the same Instagram post.
 import argparse
 import json
 import os
+import re
 import sys
 import requests
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+
+
+def shortcode(url=""):
+    """Pull the unique post id out of an Instagram URL (.../reel/ABC123/ -> ABC123)."""
+    m = re.search(r"instagram\.com/(?:p|reel|tv)/([^/?#]+)", url or "", re.I)
+    return m.group(1) if m else None
 
 if not SUPABASE_URL or not SERVICE_KEY:
     sys.exit("ERROR: set SUPABASE_URL and SUPABASE_SERVICE_KEY first.")
@@ -35,12 +42,19 @@ with open(args.infile, encoding="utf-8") as f:
     posts = json.load(f)
 
 rows = []
+seen_keys = set()
 for p in posts:
     if "tags" not in p:
         continue
+    fbid = p.get("fbid") or shortcode(p.get("url", "")) or None
+    # Skip exact duplicates within this file (same fbid would collide on upsert).
+    if fbid is not None:
+        if fbid in seen_keys:
+            continue
+        seen_keys.add(fbid)
     rows.append({
         "workspace": args.workspace,
-        "fbid": p.get("fbid"),
+        "fbid": fbid,
         "url": p.get("url"),
         "caption": p.get("caption"),
         "owner_name": p.get("owner_name"),
