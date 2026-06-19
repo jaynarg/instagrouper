@@ -16,7 +16,7 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
 
 .stash-root { --ink:#20232E; --muted:#6B7280; --canvas:#F3F2F7; --card:#FFFFFF;
-  --line:#E7E6EE; --violet:#5B3FD6; --violet-soft:#ECE8FE;
+  --line:#E7E6EE; --violet:#452fa3; --violet-soft:#ECE8FE;
   background:var(--canvas); color:var(--ink); min-height:100vh;
   font-family:'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing:antialiased; }
@@ -24,14 +24,14 @@ const CSS = `
 .stash-brandrow { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
 .stash-brand { font-family:'Bricolage Grotesque', sans-serif; font-weight:800; font-size:34px; letter-spacing:-0.02em; line-height:1; margin:0; display:flex; align-items:center; gap:10px; }
 .stash-mark { width:26px; height:30px; }
-.stash-tag { color:var(--muted); font-size:15px; margin:8px 0 0; }
+.stash-tag { color:var(--muted); font-size:15px; margin:6px 0 0; }
 .stash-tag b { color:var(--ink); font-weight:700; }
-.stash-ws { font-size:13px; color:var(--muted); margin:6px 0 0; }
+.stash-ws { font-size:15px; color:var(--muted); margin:14px 0 0; }
 .stash-ws b { color:var(--ink); font-weight:700; }
 .stash-lock { font-family:inherit; font-size:13px; font-weight:700; color:var(--violet); background:none; border:none; cursor:pointer; padding:0; }
 .stash-lock:hover { text-decoration:underline; }
-.stash-add { font-family:inherit; font-weight:700; font-size:15px; background:var(--violet); color:#fff; border:none; border-radius:999px; padding:11px 20px; cursor:pointer; transition:transform .12s, box-shadow .12s; box-shadow:0 2px 0 rgba(91,63,214,.25); }
-.stash-add:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(91,63,214,.3); }
+.stash-add { font-family:inherit; font-weight:700; font-size:15px; background:var(--violet); color:#fff; border:none; border-radius:999px; padding:11px 20px; cursor:pointer; transition:transform .12s, box-shadow .12s; box-shadow:0 2px 0 rgba(69,47,163,.25); }
+.stash-add:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(69,47,163,.3); }
 .stash-add:focus-visible { outline:3px solid var(--violet-soft); outline-offset:2px; }
 .stash-controls { margin-top:26px; }
 .stash-search { width:100%; box-sizing:border-box; font-family:inherit; font-size:17px; padding:15px 18px 15px 46px; border:1.5px solid var(--line); border-radius:14px; background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 16px center; color:var(--ink); transition:border-color .12s, box-shadow .12s; }
@@ -57,7 +57,7 @@ const CSS = `
 .stash-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:16px; margin-top:22px; align-items:start; }
 .stash-card { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; display:flex; transition:transform .14s, box-shadow .14s; }
 .stash-card:hover { transform:translateY(-3px); box-shadow:0 12px 28px rgba(32,35,46,.10); }
-.stash-card[data-editing="true"] { transform:none; box-shadow:0 12px 28px rgba(91,63,214,.16); border-color:#cdbffb; }
+.stash-card[data-editing="true"] { transform:none; box-shadow:0 12px 28px rgba(69,47,163,.16); border-color:#cdbffb; }
 .stash-spine { width:7px; flex:none; }
 .stash-body { padding:16px 18px 16px 15px; display:flex; flex-direction:column; gap:9px; min-width:0; flex:1; }
 .stash-cardtop { display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -119,6 +119,7 @@ const CSS = `
 .stash-spinner { width:34px; height:34px; border:3px solid var(--violet-soft); border-top-color:var(--violet); border-radius:50%; animation:stash-spin .8s linear infinite; margin:18vh auto 0; }
 @keyframes stash-spin { to { transform:rotate(360deg); } }
 .stash-attrib { font-size:13px; color:var(--muted); font-weight:500; margin:6px 0 0; }
+.stash-brand-accent { color:var(--violet); }
 .stash-footright { flex-wrap:wrap; gap:12px; }
 .stash-delbtn { font-family:inherit; font-size:13px; font-weight:700; color:var(--muted); background:none; border:none; cursor:pointer; padding:0; }
 .stash-delbtn:hover { color:#B42318; }
@@ -143,7 +144,7 @@ async function api(path, opts = {}) {
 function Mark() {
   return (
     <svg className="stash-mark" viewBox="0 0 26 30" fill="none" aria-hidden="true">
-      <path d="M3 2.5h20a1 1 0 0 1 1 1v23.4a1 1 0 0 1-1.6.8L13 24.2l-9.4 6.5A1 1 0 0 1 2 29.9V3.5a1 1 0 0 1 1-1Z" fill="#5B3FD6"/>
+      <path d="M3 2.5h20a1 1 0 0 1 1 1v23.4a1 1 0 0 1-1.6.8L13 24.2l-9.4 6.5A1 1 0 0 1 2 29.9V3.5a1 1 0 0 1 1-1Z" fill="#452fa3"/>
     </svg>
   );
 }
@@ -271,7 +272,7 @@ export default function App() {
     return (
       <div className="stash-root"><style>{CSS}</style>
         <div className="stash-center">
-          <h1><Mark/>Instagrouper</h1>
+          <h1><Mark/>Insta<span className="stash-brand-accent">grouper</span></h1>
           <p className="stash-attrib" style={{ marginBottom: 14 }}>by Jay Nargundkar (2026)</p>
           <p>Enter your passphrase to open your workspace.</p>
           <input className="stash-input" type="password" value={keyInput} autoFocus
@@ -290,10 +291,10 @@ export default function App() {
       <div className="stash-wrap">
         <div className="stash-brandrow">
           <div>
-            <h1 className="stash-brand"><Mark/>Instagrouper</h1>
+            <h1 className="stash-brand"><Mark/>Insta<span className="stash-brand-accent">grouper</span></h1>
             <p className="stash-attrib">by Jay Nargundkar (2026)</p>
-            <p className="stash-tag"><b>{posts.length} saved posts.</b> Find the one you were looking for.</p>
             {workspace && <p className="stash-ws">{handle ? <>Account: <b>@{handle}</b></> : <>Workspace: <b>{workspace}</b></>} · <button className="stash-lock" onClick={lock}>Lock</button></p>}
+            <p className="stash-tag"><b>{posts.length} saved posts.</b> Find the one you were looking for.</p>
           </div>
           <button className="stash-add" onClick={() => setAdding(true)}>+ Add a post</button>
         </div>
