@@ -14,8 +14,10 @@ export async function GET(req) {
 
   const supabase = getSupabase();
 
-  // Page through in chunks of PAGE so workspaces with more than 1000 posts
-  // (hi, mom) come back complete instead of capped at the first 1000.
+  // Page through in chunks of PAGE. We order by saved_date AND id: the unique id
+  // is a tiebreaker that gives a total, deterministic order, so pages don't
+  // overlap when many rows share the same saved_date (which would otherwise
+  // produce duplicate rows — and duplicate React keys break the grid).
   let all = [];
   let from = 0;
   while (true) {
@@ -24,6 +26,7 @@ export async function GET(req) {
       .select("*")
       .eq("workspace", workspace)
       .order("saved_date", { ascending: false, nullsFirst: false })
+      .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
 
     if (error) {
@@ -34,5 +37,9 @@ export async function GET(req) {
     from += data.length;
   }
 
-  return NextResponse.json({ workspace, handle: handleForWorkspace(workspace), posts: all });
+  // Belt-and-suspenders: guarantee unique ids even if a page edge ever overlaps.
+  const seen = new Set();
+  const posts = all.filter((p) => (seen.has(p.id) ? false : seen.add(p.id)));
+
+  return NextResponse.json({ workspace, handle: handleForWorkspace(workspace), posts });
 }
