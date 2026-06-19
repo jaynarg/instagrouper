@@ -272,7 +272,7 @@ export default function App() {
     return (
       <div className="stash-root"><style>{CSS}</style>
         <div className="stash-center">
-          <h1><Mark/>Insta<span className="stash-brand-accent">grouper</span></h1>
+          <h1><Mark/><span>Insta<span className="stash-brand-accent">grouper</span></span></h1>
           <p className="stash-attrib" style={{ marginBottom: 14 }}>by Jay Nargundkar (2026)</p>
           <p>Enter your passphrase to open your workspace.</p>
           <input className="stash-input" type="password" value={keyInput} autoFocus
@@ -291,10 +291,10 @@ export default function App() {
       <div className="stash-wrap">
         <div className="stash-brandrow">
           <div>
-            <h1 className="stash-brand"><Mark/>Insta<span className="stash-brand-accent">grouper</span></h1>
+            <h1 className="stash-brand"><Mark/><span>Insta<span className="stash-brand-accent">grouper</span></span></h1>
             <p className="stash-attrib">by Jay Nargundkar (2026)</p>
             {workspace && <p className="stash-ws">{handle ? <>Account: <b>@{handle}</b></> : <>Workspace: <b>{workspace}</b></>} · <button className="stash-lock" onClick={lock}>Lock</button></p>}
-            <p className="stash-tag"><b>{posts.length} saved posts.</b> Find the one you were looking for.</p>
+            <p className="stash-tag"><b>{posts.length.toLocaleString()} saved posts.</b> Find the one you were looking for.</p>
           </div>
           <button className="stash-add" onClick={() => setAdding(true)}>+ Add a post</button>
         </div>
@@ -323,7 +323,7 @@ export default function App() {
             </div>
 
             <div className="stash-meta">
-              <span className="stash-count">Showing <b>{filtered.length}</b> of {posts.length}
+              <span className="stash-count">Showing <b>{filtered.length.toLocaleString()}</b> of {posts.length.toLocaleString()}
                 {cat !== "All" && <> in <b>{cat}</b></>}{activeTag && <> tagged <b>#{activeTag}</b></>}</span>
               <div className="stash-sort" role="group" aria-label="Sort order">
                 <button className="stash-sortbtn" data-active={sort === "newest"} onClick={() => setSort("newest")}>Newest</button>
