@@ -356,14 +356,16 @@ export default function App() {
                 {posts.length > 0 && <button className="stash-clear" onClick={clearAll}>Clear filters</button>}
               </div>
             ) : (
-              <div className="stash-grid">
-                {filtered.slice(0, visible).map((p) => (
-                  <PostCard key={p.id} post={p} onSave={savePost} onRetag={retagPost} onAskDelete={setConfirmDel} onTag={setActiveTag} />
-                ))}
-              </div>
-              <div ref={sentinelRef} className="stash-more" aria-hidden="true">
-                {visible < filtered.length ? "Loading more\u2026" : ""}
-              </div>
+              <>
+                <div className="stash-grid">
+                  {filtered.slice(0, visible).map((p) => (
+                    <PostCard key={p.id} post={p} onSave={savePost} onRetag={retagPost} onAskDelete={setConfirmDel} onTag={setActiveTag} />
+                  ))}
+                </div>
+                <div ref={sentinelRef} className="stash-more" aria-hidden="true">
+                  {visible < filtered.length ? "Loading more\u2026" : ""}
+                </div>
+              </>
             )}
           </>
         )}
