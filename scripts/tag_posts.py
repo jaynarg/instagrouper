@@ -69,7 +69,30 @@ Guidance:
 
 
 def flatten_post(post):
-    """Flatten Instagram's nested saved-post structure into a clean record."""
+    """Normalize a saved-post record into a clean dict.
+
+    Handles BOTH input shapes:
+      * Instagram's raw JSON export (nested 'label_values')
+      * already-flattened records from html_to_json.py (url/caption/owner_* keys)
+    """
+    # Already-flattened (from the HTML converter): pass through, lightly cleaned.
+    if "label_values" not in post and ("url" in post or "caption" in post):
+        ts = post.get("timestamp")
+        saved = post.get("saved_date")
+        if not saved and ts:
+            saved = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+        return {
+            "fbid": post.get("fbid", "") or "",
+            "timestamp": ts,
+            "saved_date": saved,
+            "url": post.get("url", "") or "",
+            "caption": fix_text(post.get("caption", "") or ""),
+            "hashtags": post.get("hashtags", []) or [],
+            "owner_name": fix_text(post.get("owner_name", "") or ""),
+            "owner_username": post.get("owner_username", "") or "",
+        }
+
+    # Otherwise: Instagram's nested raw export.
     rec = {
         "fbid": post.get("fbid", ""),
         "timestamp": post.get("timestamp"),

@@ -89,9 +89,25 @@ def main():
 
         owner_name, owner_username = parse_owner(table)
 
+        # The saved date sits in a sibling div after the post table, e.g.
+        # "Jun 18, 2026 1:37 am". Parse it to saved_date + unix timestamp.
+        saved_date, ts = None, None
+        date_div = table.find_next("div", class_="_a6-o")
+        if date_div:
+            raw_date = date_div.get_text(strip=True)
+            for fmt in ("%b %d, %Y %I:%M %p", "%b %d, %Y"):
+                try:
+                    dt = datetime.strptime(raw_date, fmt)
+                    saved_date = dt.strftime("%Y-%m-%d")
+                    ts = int(dt.replace(tzinfo=timezone.utc).timestamp())
+                    break
+                except ValueError:
+                    continue
+
         records.append({
             "fbid": "",                 # HTML export has no fbid; loader will fall back to URL shortcode
-            "timestamp": None,
+            "timestamp": ts,
+            "saved_date": saved_date,
             "url": url_cell,
             "caption": caption,
             "hashtags": hashtags,
