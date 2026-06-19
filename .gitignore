@@ -1,6 +1,15 @@
+# dependencies / build
 node_modules
 .next
+*.log
+.DS_Store
+
+# secrets — real keys live in Vercel env vars, never in the repo
 .env.local
 .env*.local
-.DS_Store
-*.log
+
+# personal data exports (never commit anyone's saved-post libraries)
+saved_posts*.json
+*_saved_posts*.json
+tagged_posts.json
+*.html
