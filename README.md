@@ -134,3 +134,11 @@ No new deployment — just data + a passphrase:
 - The original Instagram caption is stored read-only; edits live in `summary`.
   "Re-tag with AI" regenerates category + tags from the edited text.
 - Same Instagram post in two workspaces is fine — dedupe is per `(workspace, fbid)`.
+- **Search matching is deliberately asymmetric.** In captions, summaries and tags a
+  term matches the *start of a word*, so "chick" finds "chicken" but "dal" does not
+  match "bridal". In creator names it must match a *whole* word, so "dal" doesn't
+  drag in "Sierra Dallas" while "dallas" and "kenji" still find their accounts.
+  Multiple words are AND ("cucumber sandwich" needs both), and matching ignores
+  accents ("jalapeno" finds "jalapeño"). One known edge: a compound hashtag like
+  `#easyrecipe` is a single token, so "recipe" won't match it — the AI-generated
+  tags usually split those into separate words, which covers most cases.

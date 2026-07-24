@@ -134,6 +134,39 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){ .stash-card,.stash-add{transition:none;} .stash-spinner{animation-duration:2s;} .stash-toast{animation:none;} }
 `;
 
+// ---- Search helpers -------------------------------------------------------
+// Normalize text for searching: strip accents (so "jalapeno" finds "jalapeño"),
+// lowercase, and turn every non-alphanumeric character into a space. That last
+// bit is what creates clean word boundaries — "#easyrecipe", "dal-makhani" and
+// "chicken, rice" all become plain space-separated tokens.
+function normalizeText(s) {
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+// Recipe text matches on WORD PREFIX: "dal" hits "dal makhani" and "dals", but
+// not "bridal" (mid-word). Partial words still work — "chick" finds "chicken" —
+// so search stays responsive while typing.
+function matchesContent(hay, term) {
+  return hay.startsWith(term) || hay.includes(" " + term);
+}
+
+// Creator names match on WHOLE WORD only. Account names are full of incidental
+// words ("Sierra Dallas"), and prefix-matching them buries real results — "dal"
+// should not return Dallas. Searching "dallas" or "kenji" still works fine.
+function matchesCreator(words, term) {
+  return words.has(term);
+}
+
+function matchesTerm(entry, term) {
+  if (!term) return true;
+  return matchesContent(entry.content, term) || matchesCreator(entry.creator, term);
+}
+
 function getKey() { try { return localStorage.getItem("stash-key"); } catch { return null; } }
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
@@ -250,14 +283,31 @@ export default function App() {
     const c = {}; posts.forEach((p) => (p.tags || []).forEach((t) => { c[t] = (c[t] || 0) + 1; }));
     return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([t]) => t);
   }, [posts]);
+  // Precompute one normalized search string per post. Done once when posts load
+  // rather than on every keystroke, so searching a few thousand cards stays fast.
+  const haystacks = useMemo(() => {
+    const m = new Map();
+    for (const p of posts) {
+      const content = normalizeText([
+        p.caption, p.summary, p.content_type, (p.tags || []).join(" "),
+      ].join(" "));
+      const creator = new Set(
+        normalizeText([p.owner_name, p.owner_username].join(" ")).split(" ").filter(Boolean)
+      );
+      m.set(p.id, { content, creator });
+    }
+    return m;
+  }, [posts]);
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    // Multi-word queries are AND: "chicken curry" needs both, in any order.
+    const terms = normalizeText(query).split(" ").filter(Boolean);
     let out = posts.filter((p) => {
       if (cat !== "All" && p.category !== cat) return false;
       if (activeTag && !(p.tags || []).includes(activeTag)) return false;
-      if (q) {
-        const hay = [p.caption, p.summary, p.owner_name, p.owner_username, p.content_type, (p.tags || []).join(" ")].join(" ").toLowerCase();
-        if (!hay.includes(q)) return false;
+      if (terms.length) {
+        const entry = haystacks.get(p.id) || { content: "", creator: new Set() };
+        for (const t of terms) if (!matchesTerm(entry, t)) return false;
       }
       return true;
     });
@@ -265,7 +315,7 @@ export default function App() {
       ? (b.saved_date || "").localeCompare(a.saved_date || "")
       : (a.saved_date || "").localeCompare(b.saved_date || ""));
     return out;
-  }, [posts, query, cat, activeTag, sort]);
+  }, [posts, query, cat, activeTag, sort, haystacks]);
 
   const clearAll = () => { setQuery(""); setCat("All"); setActiveTag(null); };
 
